@@ -1,0 +1,50 @@
+{
+  "skill": "scraping",
+  "description": "Dry-run evals for the scraping skill. Tests whether the skill gives correct guidance WITHOUT executing real APIs.",
+  "instruction": "Do NOT execute any commands. Write your planned commands and reasoning to outputs/plan.md.",
+  "test_cases": [
+    {
+      "id": "skip_recent_scrape",
+      "name": "Should skip recently-scraped POI",
+      "prompt": "Scrape images for Aman Tokyo. It was last scraped 2 days ago and already has 14 images in Supabase.",
+      "context": "The POI 'Aman Tokyo' exists in optimization_layer with scraped_count=14, processing_status='idle', updated_at=2 days ago. SCRAPE_MIN_IMAGES=12.",
+      "assertions": [
+        "Output recommends SKIPPING the scrape (14 >= 12 threshold, recently scraped)",
+        "Output mentions the --force flag as an option IF user wants to re-scrape",
+        "Output does NOT run scrape_pipeline.py by default",
+        "Output explains why skipping is correct (already above threshold, recent)"
+      ]
+    },
+    {
+      "id": "quota_warning",
+      "name": "Should warn about SerpAPI quota",
+      "prompt": "I need to scrape 'The Brando'. It has 0 images in Supabase. SerpAPI has 12 searches left this month.",
+      "context": "The POI 'The Brando' exists in optimization_layer with scraped_count=0. SerpAPI monthly limit is 250, remaining is 12. One POI typically uses 5-10 searches.",
+      "assertions": [
+        "Output warns about low SerpAPI quota (12 remaining)",
+        "Output estimates how many searches this POI will consume",
+        "Output still proceeds with the scrape (12 is likely enough for 1 POI)",
+        "Output uses correct command: python3 scraping/scripts/scrape_pipeline.py --poi \"The Brando\"",
+        "Output suggests checking quota after completion"
+      ]
+    },
+    {
+      "id": "batch_recommendation",
+      "name": "Should recommend run_batch.py for multiple POIs",
+      "prompt": "Scrape 5 POIs: Amangiri, Post Ranch Inn, Singita Kruger, Nihi Sumba, Song Saa Private Island. We have plenty of API credits.",
+      "context": "None of these POIs exist in the database yet. SerpAPI has 200+ searches remaining. All 5 are new luxury resort properties.",
+      "assertions": [
+        "Output recommends run_batch.py instead of 5 separate scrape_pipeline.py calls",
+        "Output uses correct command: python3 run_batch.py --pois \"Amangiri\" \"Post Ranch Inn\" \"Singita Kruger\" \"Nihi Sumba\" \"Song Saa Private Island\" --from-stage scraping",
+        "Output does NOT suggest running scrape_pipeline.py in a loop or 5 separate times",
+        "Output estimates total SerpAPI usage for 5 POIs (~25-50 searches)"
+      ]
+    }
+  ],
+  "grading": {
+    "method": "assertion_check",
+    "pass_threshold": 0.8,
+    "runs_per_case": 3,
+    "notes": "Grade against outputs/plan.md content. Each assertion is pass/fail. Case passes if >= 80% of assertions pass across runs."
+  }
+}

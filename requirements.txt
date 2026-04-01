@@ -1,0 +1,27 @@
+# Core
+requests
+python-dotenv
+Pillow
+numpy
+supabase
+
+# Image search sources
+ddgs
+google-search-results
+icrawler
+
+# AI filtering
+torch
+open-clip-torch
+clip @ git+https://github.com/openai/CLIP.git
+imagehash
+
+# Gemini (location resolution, dynamic queries)
+google-generativeai
+
+# Optional — only needed if using legacy filters (person_filter, ocr_filter)
+# ultralytics
+# easyocr
+
+# NOTE: For CPU-only (no GPU), install torch with:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
