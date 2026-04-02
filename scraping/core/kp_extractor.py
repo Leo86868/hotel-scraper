@@ -5,8 +5,6 @@ Uses bb-browser's snapshot + ref workflow for navigation:
 - cmd("click", ref=N) → click tabs
 - cmd("scroll", direction="down") → scroll inside KP panel
 - _eval() → extract image URLs from DOM (snapshot doesn't expose img src)
-
-Drop-in replacement for _extract_kp_tabs in bb_source.py.
 """
 
 import json

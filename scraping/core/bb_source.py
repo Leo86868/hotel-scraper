@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
 import requests as http_requests
-from scraping.config import BB_DAEMON_URL, GOOGLE_IMAGES_MAX, KP_IMAGES_PER_CATEGORY, OFFICIAL_SITE_MAX
+from scraping.config import BB_DAEMON_URL, GOOGLE_IMAGES_MAX, OFFICIAL_SITE_MAX
 
 logger = logging.getLogger(__name__)
 _DL_TIMEOUT = 15
@@ -66,56 +66,6 @@ def _check_connection():
 
 def _is_junk(url: str) -> bool:
     return any(p in url.lower() for p in _JUNK)
-
-def _parse_tab_refs(snap: str) -> dict:
-    refs = {}
-    for line in snap.split("\n"):
-        m = re.search(r'"Change collection to (.+?)" \[ref=(\d+)\]', line.strip())
-        if m: refs[m.group(1)] = m.group(2)
-    return refs
-
-def _extract_kp_tabs(poi_name: str) -> List[dict]:
-    _open(f"https://www.google.com/search?q={poi_name.replace(' ', '+').replace('&', '%26')}")
-    time.sleep(4)
-    if _eval('document.querySelector("button.QPVgwd")?"yes":"no"') != "yes":
-        logger.warning("KP: no photos button for '%s'", poi_name)
-        _close(); return []
-    _eval('document.querySelector("button.QPVgwd").click()')
-    time.sleep(4)
-    snap = _snap()
-    if not snap:
-        _close(); return []
-    tab_names = list(_parse_tab_refs(snap).keys())
-    if not tab_names:
-        logger.warning("KP: no tabs for '%s'", poi_name)
-        _close(); return []
-    logger.info("KP: %d tabs: %s", len(tab_names), tab_names)
-    entries, seen = [], set()
-    for tab_name in tab_names:
-        refs = _parse_tab_refs(_snap())
-        ref = refs.get(tab_name)
-        if not ref:
-            continue
-        cmd("click", ref=ref); time.sleep(3)
-        for _ in range(10):
-            _eval('(function(){var el=document.querySelector("[data-uid]");if(!el)return;var p=el.parentElement;while(p){if(p.scrollHeight>p.clientHeight+50){p.scrollTop+=400;return;}p=p.parentElement;}})()');
-            time.sleep(0.3)
-        time.sleep(1)
-        raw = _eval('(function(){var imgs=document.querySelectorAll("img[src*=\'googleusercontent\']"),seen=new Set(),urls=[];for(var i=0;i<imgs.length;i++){var s=imgs[i].src;if(s.includes("/a/")||s.includes("/a-/")||imgs[i].naturalWidth<30)continue;var b=s.replace(/=.*$/,"");if(!seen.has(b)&&b.length>50){seen.add(b);urls.push(b);}}return JSON.stringify({c:urls.length,u:urls});})()')
-        try:
-            data = json.loads(raw); n = 0
-            for url in data.get("u", []):
-                if n >= KP_IMAGES_PER_CATEGORY:
-                    break
-                full = url + "=s0"
-                if full not in seen:
-                    seen.add(full); entries.append({"url": full, "source": "google_kp", "category": tab_name}); n += 1
-            logger.info("KP: '%s' -> %d", tab_name, n)
-        except (json.JSONDecodeError, TypeError):
-            pass
-    _close()
-    logger.info("KP: %d URLs for '%s'", len(entries), poi_name)
-    return entries
 
 def _extract_google_images(poi_name: str) -> List[dict]:
     encoded = (poi_name + " hotel").replace(" ", "+").replace("&", "%26")
